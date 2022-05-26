@@ -16,7 +16,7 @@ import threading
 import struct
 import time
 
-configFile = "config.json"
+configFile = "/home/pi/config.json"
 
 Mouse = open( "/dev/input/mice", "r+b", 0)
 

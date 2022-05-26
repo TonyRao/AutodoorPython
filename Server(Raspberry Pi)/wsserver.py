@@ -1,112 +1,112 @@
+#!/usr/bin/python3
+##############################################################
+#                                                            #
+#             AutoDoor2(config) For Raspberry Pi             #
+#              By Xavier Leff And Julio Machado              #
+#                                                            #
+##############################################################
+# make sure you run this in sudo
 from ast import Str
 import asyncio
 from copy import error
-from re import S
+import time
 import websockets
 import json
 import psutil
 import subprocess
 
-def kill():
+# global var
+logFileLoc = "/home/pi/wsserver.log"
+
+def logs(logStatement: str): # to log operations
+    logStatement = f"{time.asctime()}: " + logStatement
+    print(logStatement)
+    with open(logFileLoc, "a") as logFile:
+        logFile.write(logStatement+"\n")
+
+def kill(): # kills autodoor
     for process in psutil.process_iter():
-        if process.cmdline() == ['python3', '/home/pi/AutoDoor/AutoDoor2.py']:
-            process.kill()
-        if process.cmdline() == ['python3','AutoDoor2.py']:
+        if process.cmdline() == ['python3', '/home/pi/AutoDoor2.py'] or process.cmdline() == ['python3','AutoDoor2.py']:
             process.kill()
 
-def start():
+def start(): # Start autodoor
     for process in psutil.process_iter():
-        if process.cmdline() == ['python3', '/home/pi/AutoDoor/AutoDoor2.py']:
+        if process.cmdline() == ['python3', '/home/pi/AutoDoor2.py'] or process.cmdline() == ['python3','AutoDoor2.py']:
             process.kill()
-        if process.cmdline() == ['python3','AutoDoor2.py']:
-            process.kill()
-    subprocess.Popen(['nohup','python3', '/home/pi/AutoDoor/AutoDoor2.py'],start_new_session=True)
+    time.sleep(1)
+    subprocess.Popen(['nohup','python3', '/home/pi/AutoDoor2.py'],start_new_session=True)
 
 
 def checkData(config,list):
     prob = []
     for param in list:
-        if config[param]!= None:
+        if config[param]== None:
             prob.append(param)
-    if len(prob) >0:
-        return f"Missing Field::{prob}"
+    if len(prob) > 0:
+        return f"Missing Fieldß{prob}"
     return False
 
 
 async def acceptIncomingConnection(websocket):
     try:
         async for message in websocket:
-            if "::" in message:
-                arg,data = message.split('::')
+            if "ß" in message:
+                arg,data = message.split('ß')
             else:
                 arg = message
-            try:
-                if arg ==  "updateConfig":
-                    mesConfig = json.loads(data)
-                    res = checkData(mesConfig,["schoolStartTime","schoolEndTime","lunchStartTime","lunchEndTime","starth","endh","startmin","endmin","lstarth","lstartmin","lendh","lendmin","LEDPin","ServoPin","list"])
-                    if type(res) == str :
-                        websocket.send(res)
-                        return
-                    with open('../AutoDoor/config.json',"w") as f:
-                        f.write(mesConfig)
-                    await websocket.send("config updated")
-                    pass
-                elif arg ==  "updateTime":
-                    mesConfig = json.loads(data)
-                    res = checkData(mesConfig,["schoolStartTime","schoolEndTime","lunchStartTime","lunchEndTime","starth","endh","startmin","endmin","lstarth","lstartmin","lendh","lendmin"])
-                    if type(res) == str :
-                        websocket.send(res)
-                        return
-                    with open('../AutoDoor/config.json',"r") as f:
+            try: # cluster fuck of if else
+                if arg == "getConfig":
+                    with open('/home/pi/config.json',"r") as f:
                         configStr = f.read()
-                        config = json.loads(configStr)
-                        mesConfig["LEDPin"] = config["LEDPin"]
-                        mesConfig["ServoPin"] = config["ServoPin"]
-                        mesConfig["list"] = config["list"]
-                    with open('../AutoDoor/config.json',"w") as f:
-                        f.write(mesConfig)
-                    await websocket.send("Time Updated") 
-                    pass
-                elif arg ==  "updateStudents":
-                    mesConfig = json.loads(data)
-                    res = checkData(mesConfig,["schoolStartTime","schoolEndTime","lunchStartTime","lunchEndTime","starth","endh","startmin","endmin","lstarth","lstartmin","lendh","lendmin"])
+                        await websocket.send(f"configß{configStr}")
+                elif arg ==  "updateConfig":
+                    print(data)
+                    res = checkData(json.loads(data),["starth","endh","startmin","endmin","lstarth","lstartmin","lendh","lendmin","LEDPin","ServoPin","list"])
                     if type(res) == str :
-                        websocket.send(res)
-                        return
-                    with open('../AutoDoor/config.json',"r") as f:
-                        configStr = f.read()
-                        config = json.loads(configStr)
-                        config['list'] = mesConfig['list']
-                    with open('../AutoDoor/config.json',"w") as f:
-                        f.write(config)
-                    await websocket.send("students updated")
-                    pass
-                elif arg ==  "getLogs":
-                    with open('../AutoDoor/AutoDoor2.log',"r") as f:
-                        log = f.read()
+                        logs(res)
+                        await websocket.send(res)
+                    else:
+                        with open('/home/pi/config.json',"w") as f:
+                            f.write(data)
+                        start()
+                        re = "config updated"
+                        logs(re)
+                        await websocket.send(re)
                         pass
-                    await websocket.send(f"Logs::{log.encode()}")
+                elif arg ==  "getLogs":
+                    with open('/home/pi/AutoDoor2.log',"r") as f:
+                        logLines = f.read()
+                        await websocket.send(f"Logsß{logLines}")
+                        logs("logs sent")
                     pass
                 elif arg ==  "stopAutodoor":
                     kill()
-                    await websocket.send("AutoDoor killed")
+                    re = "AutoDoor killed"
+                    logs(re)
+                    await websocket.send(re)
                     pass
                 elif arg ==  "startAutodoor":
                     start()
+                    re = "AutoDoor Started"
+                    log = re
                     await websocket.send("AutoDoor Started")
                 else:
-                    await websocket.send(f"Bad Command::{arg}")
-                print(f"executed {arg}")
-            except error:
-                print(error)
-                await websocket.send(f"Error Executing::{arg}")
+                    re = f"Bad Commandß{arg}"
+                    logs(re)
+                    await websocket.send(re)
+                logs(f"executed {arg}")
+            except Exception as err:
+                logs(f"Error:[{err}]")
+                re = f"Error Executingß{arg}"
+                logs(re)
+                await websocket.send(re)
     except websockets.exceptions.ConnectionClosedError:
-        print("Connection Closed")
+        logs("Connection Closed")
 
 async def main():
     async with websockets.serve(acceptIncomingConnection, "0.0.0.0", 8765):
         await asyncio.Future()  # run forever
 
 
-print("Starting...")
+logs("Starting...")
 asyncio.run(main())
