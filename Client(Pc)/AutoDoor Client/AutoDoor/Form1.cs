@@ -8,7 +8,7 @@ namespace AutoDoor
     public partial class Form1 : Form
     {
         // this was written very poorly don't blame us. our hands were forced by shitty microsft .net shit
-        WatsonWsClient wsc = new WatsonWsClient("192.168.12.5", 8765, false);
+        WatsonWsClient wsc = new WatsonWsClient("192.168.1.15", 8765, false);
         public static Form2 frm2;
         public static string incomArg = "";
         public static string incomData = "";
@@ -19,7 +19,7 @@ namespace AutoDoor
         }
         static void MessageReceived(object sender, MessageReceivedEventArgs args) // don't bother running stuff here as it won't work 99% of the time
         {
-            string serverData = Encoding.UTF8.GetString(args.Data);
+            string serverData = Encoding.UTF8.GetString(args.Data.Array);
             if (!serverData.Contains("ß")) // looks for ß and splits it if not found returns and displays message
             {
                 incomArg = serverData; return;
